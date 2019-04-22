@@ -5,7 +5,7 @@ prefix = '../Flickr_Data/Images/'
 flickr_data = torchvision.datasets.Flickr30k(prefix,'../Flickr_Data/Flickr_TextData/Flickr8k.token')
 #for i,e in enumerate(flickr_data):
 #    if i%10 == 9: print(i//10)
-
+#
 #raise Exception()
 
 cnt, idx = {}, {}
@@ -40,17 +40,41 @@ class Reuse(object):
             self._g = self.g(*self.p1,**self.p2)
             raise StopIteration()
 
+import collections
+
+class Cache:
+    def __init__(self, m, cache_size):
+        self.cache_size = cache_size
+        self.cache = {}
+        self.que = collections.deque()
+        self.m = m
+    def __getitem__(self, x):
+        if x not in self.cache:
+            y = self.m(x)
+            self.cache[x] = y
+            self.que.append(x)
+        else: y = self.cache[x]
+        
+        if len(self.que) > self.cache_size:
+            xp = self.que.popleft()
+            self.cache.pop(xp)
+        return y
+        
+
 def Loader(data,shuffle=True, batch_size=1):
+    
     toTensor = torchvision.transforms.ToTensor()
-    def inst(img, cap):
-        return toTensor(Image.open(prefix+img).convert('RGB')), cap
+    def getImg(img_id): return toTensor(Image.open(prefix+img_id).convert('RGB'))
+    cache = Cache(getImg,1000)
+    def inst(img_id, cap): return cache[img_id], cap
+
     def _load():
         random.shuffle(data)
         idata = iter(data)
         while True: yield zip(*[inst(*idata.__next__()) for i in range(batch_size)])
     return Reuse(_load)
 
-loader = Loader(data, shuffle=True, batch_size=10)
+loader = Loader(data, shuffle=True, batch_size=100)
 
 for epoch in range(2):
     for i, (xs,ys) in enumerate(loader):
