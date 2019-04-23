@@ -22,7 +22,6 @@ def cntTok(tok, flt=False):
 
 data = [(i, [cntTok(tok) for tok in sent.lower().split() ]) for i in flickr_data.ids for sent in flickr_data.annotations[i]]
 data = [(i, [cntTok(tok,True) for tok in sent]) for i,sent in data]
-
 import random
 from PIL import Image
 
@@ -71,7 +70,8 @@ def Loader(data,shuffle=True, batch_size=1):
     def _load():
         random.shuffle(data)
         idata = iter(data)
-        while True: yield zip(*[inst(*idata.__next__()) for i in range(batch_size)])
+        try: while True: yield zip(*[inst(*idata.__next__()) for i in range(batch_size)])
+        except StopIteration: pass
     return Reuse(_load)
 
 loader = Loader(data, shuffle=True, batch_size=100)
