@@ -1,27 +1,13 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
 import torch
 import torchvision
-import itertools
-prefix = '../Flickr_Data/Images/'
-flickr_data = torchvision.datasets.Flickr30k(prefix,'../Flickr_Data/Flickr_TextData/Flickr8k.token')
-#for i,e in enumerate(flickr_data):
-#    if i%10 == 9: print(i//10)
-#
-#raise Exception()
-
-cnt, idx = {}, {}
-def cntTok(tok, flt=False):
-    if flt:
-        if tok not in idx: return 0
-        return idx[tok]
-    if tok not in cnt:
-        cnt[tok] = 1
-    else:
-        cnt[tok] += 1
-        if cnt[tok]>=5: idx[tok] = len(idx)+1
-    return tok
-
-data = [(i, [cntTok(tok) for tok in sent.lower().split() ]) for i in flickr_data.ids for sent in flickr_data.annotations[i]]
-data = [(i, [cntTok(tok,True) for tok in sent]) for i,sent in data]
+import torchvision.transforms as transforms
+import numpy as np
 import random
 from PIL import Image
 
@@ -60,22 +46,26 @@ class Cache:
         return y
         
 
-def Loader(data,shuffle=True, batch_size=1):
+def Loader(data, tok_num, seq_len=50, shuffle=True, batch_size=1):
+    toTensor = transforms.ToTensor()
+    transform = transforms.Compose([
+        transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
+        toTensor
+    ])
     
-    toTensor = torchvision.transforms.ToTensor()
-    def getImg(img_id): return toTensor(Image.open(prefix+img_id).convert('RGB'))
+    def getImg(img_id): return transform(Image.open('./dataset/Flickr8k/Images/'+img_id).convert('RGB')).reshape(1,3, 224, 224)
     cache = Cache(getImg,1000)
-    def inst(img_id, cap): return cache[img_id], cap
+    def inst(img_id, cap):
+        cap = [tok if i<len(cap) else 0 for i,tok in enumerate(cap)]
+        return cache[img_id], cap
 
     def _load():
         random.shuffle(data)
         idata = iter(data)
-        try: while True: yield zip(*[inst(*idata.__next__()) for i in range(batch_size)])
+        try: 
+            while True:
+                imgs, caps = zip(*[inst(*idata.__next__()) for i in range(batch_size)])
+                yield torch.cat(imgs), torch.cat(caps)
         except StopIteration: pass
     return Reuse(_load)
 
-loader = Loader(data, shuffle=True, batch_size=100)
-
-for epoch in range(2):
-    for i, (xs,ys) in enumerate(loader):
-        print(i)
