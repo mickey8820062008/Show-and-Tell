@@ -31,8 +31,7 @@ class NIC(nn.Module):
         
     def forward(self, image, target):
         batch_size, timesteps = target.shape
-        
-        image_features = self.cnn(image)
+        with torch.no_grad(): image_features = self.cnn(image)
         _, (self.ht, self.ct) = self.lstm(image_features.view(1, batch_size, -1))
         
         embedded_target = self.embedding(target)
@@ -43,11 +42,9 @@ class NIC(nn.Module):
             embedded_target_time_t = embedded_target[:, t, :].view(1, batch_size, -1)
             output, (self.ht, self.ct) = self.lstm(embedded_target_time_t)
             output = self.softmax(output)
-            outputs.append(output.view(1, -1))
-            
-        outputs = torch.stack(outputs) # (time_steps,batch_size,features)
-        outputs = outputs.permute(1,0, 2) # (batch_size,time_steps,features)
-        
+            outputs.append(output)  
+        outputs = torch.cat(outputs) # (time_steps,batch_size,features)
+        outputs = outputs.permute(1,0, 2).contiguous() # (batch_size,time_steps,features)
         loss = self.loss(outputs.view(batch_size*timesteps, -1), target.view(batch_size*timesteps))
             
         return loss, outputs
@@ -55,17 +52,45 @@ class NIC(nn.Module):
 
 # In[40]:
 
-
-# model = NIC(3005).cuda()
-
+learning_rate = 0.001
+if False:
+    sv = torch.load('../model/NIC.model')
+    model, opt = sv['model'].cuda(), sv['opt']
+else:
+    model = NIC(3005).cuda()
+    opt = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
 
 # In[41]:
+import preprocess_data
+
+transform = transforms.Compose([
+    transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
+    transforms.ToTensor()
+])
+batch_size, seq_len = 128, 50
+loader = preprocess_data.Loader(
+    transform=transform, seq_len=seq_len, batch_size=batch_size,shuffle=True)
 
 
-# transform = transforms.Compose([
-#     transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
-#     transforms.ToTensor()
-# ])
+epoch_num = 1
+for epoch in range(epoch_num):
+    for i, (xs,ys) in enumerate(loader):
+        xs, ys = xs.cuda(), ys.cuda()
+        loss, out = model(xs,ys)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+
+
+torch.save({'opt':opt, 'model':model},'../model/NIC.model')
+
+# Test
+model.eval()
+for i, (xs,ys) in enumerate(loader):
+    xs, ys = xs.cuda(), ys.cuda()
+    _, out = model(xs,ys)
+    print(out.shape)
+
 
 # img_id = '667626_18933d713e.jpg'
 
