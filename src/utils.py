@@ -19,6 +19,7 @@ def resolve_caption(outputs, reference='./preprocessed_data/flickr8k_id_to_word.
     for output in outputs:
         caption = ' '.join([id_to_word[id] for id in output])
         captions.append(caption)
+        
     # captions: (batch_size)
     return captions
 
