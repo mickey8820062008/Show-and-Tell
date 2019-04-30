@@ -1,0 +1,6 @@
+t1
+t2
+Traceback (most recent call last):
+  File "NIC_model.py", line 75, in <module>
+    raise Exception()
+Exception

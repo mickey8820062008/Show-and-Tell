@@ -85,16 +85,12 @@ class FlickrDataset(VisionDataset):
 
 from torchvision import transforms
 
-toTensor = transforms.ToTensor()
-transform = transforms.Compose([
-    transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
-    toTensor
-])
 
+def Loader(transform, seq_len, batch_size, shuffle):
+    train = FlickrDataset(transform,seq_len,prefix,flickr8k_data)
+    dataloader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=4)
+    return dataloader
 
-
-train = FlickrDataset(transform,50,prefix,flickr8k_data)
-dataloader = torch.utils.data.DataLoader(train, batch_size=2, shuffle=True, num_workers=4)
 # # check caption length
 # import numpy as np
 # caption_length = []

@@ -68,11 +68,16 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 batch_size, seq_len = 128, 50
+print('t1')
 loader = preprocess_data.Loader(
     transform=transform, seq_len=seq_len, batch_size=batch_size,shuffle=True)
+print('t2')
+raise Exception()
+import utils
 
+ref = './flickr8k_id_to_word.pylist'
 
-epoch_num = 1
+epoch_num = 0
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):
         xs, ys = xs.cuda(), ys.cuda()
@@ -80,7 +85,7 @@ for epoch in range(epoch_num):
         opt.zero_grad()
         loss.backward()
         opt.step()
-
+    print('epoch: ',epoch,utils.resolve_caption(out,True,ref))
 
 torch.save({'opt':opt, 'model':model},'../model/NIC.model')
 
@@ -89,7 +94,12 @@ model.eval()
 for i, (xs,ys) in enumerate(loader):
     xs, ys = xs.cuda(), ys.cuda()
     _, out = model(xs,ys)
-    print(out.shape)
+    if i%50 == 49:
+        print('gen/true:',i)
+        for a,b in zip(utils.resolve_caption(out,True,ref),
+                utils.resolve_caption(ys,False,ref)):
+            print('gen: ',a)
+            print('true: ',b)
 
 
 # img_id = '667626_18933d713e.jpg'
