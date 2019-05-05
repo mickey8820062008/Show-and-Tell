@@ -11,20 +11,6 @@ import numpy as np
 import random
 from PIL import Image
 
-# Re-using a generator
-class Reuse(object):
-    def __init__(self, g, *p1, **p2):
-        self.p1 = p1
-        self.p2 = p2
-        self.g = g
-        self._g = g(*p1,**p2)
-    def __iter__(self): return self
-    def __next__(self):
-        try: return self._g.__next__()
-        except StopIteration:
-            self._g = self.g(*self.p1,**self.p2)
-            raise StopIteration()
-
 import collections
 
 class Cache:
@@ -46,26 +32,43 @@ class Cache:
         return y
         
 
-def Loader(data, tok_num, seq_len=50, shuffle=True, batch_size=1):
-    toTensor = transforms.ToTensor()
-    transform = transforms.Compose([
-        transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
-        toTensor
-    ])
-    
-    def getImg(img_id): return transform(Image.open('./dataset/Flickr8k/Images/'+img_id).convert('RGB')).reshape(1,3, 224, 224)
-    cache = Cache(getImg,1000)
-    def inst(img_id, cap):
-        cap = [tok if i<len(cap) else 0 for i,tok in enumerate(cap)]
-        return cache[img_id], cap
+from vision import *
+import numpy as np
 
-    def _load():
-        random.shuffle(data)
-        idata = iter(data)
-        try: 
-            while True:
-                imgs, caps = zip(*[inst(*idata.__next__()) for i in range(batch_size)])
-                yield torch.cat(imgs), torch.cat(caps)
-        except StopIteration: pass
-    return Reuse(_load)
+imgRt = '../Flickr_Data/Images/'
+annRt = '../Flickr_Data/Flickr_TextData/Flickr8k.token'
 
+token_pool = torch.load('./flickr8k_id_to_word.pylist')
+flickr8k_data = torch.load('./flickr8k_data.pylist')
+
+
+class FlickrDataset(VisionDataset):
+    def __len__(self): return len(self.prLis)
+    def __init__(self, transform, seq_len, prLis):
+        self.seq_len = seq_len
+        self.transform = transform
+        self.prLis = prLis
+        self.toTensor = torchvision.transforms.ToTensor()
+        super(FlickrDataset, self).__init__(imgRt)
+    def __getitem__(self, idx):
+        img_path = self.root+self.prLis[idx][0]
+        img = Image.open(img_path).convert('RGB')
+        img = self.transform(img)
+        cap = self.prLis[idx][1]
+        cap = [cap[i] if i<len(cap) else 0 for i in range(self.seq_len)]
+        return img, torch.LongTensor(cap)
+
+from torchvision import transforms
+
+
+def Loader(transform, seq_len, batch_size, shuffle):
+    train = FlickrDataset(transform,seq_len,flickr8k_data)
+    dataloader = torch.utils.data.DataLoader(
+        train, batch_size=batch_size, shuffle=True, num_workers=4)
+    return dataloader
+
+# Usage
+# loader = Loader(...)
+# for e in range(epoch):
+#   for i,(xs,ys) in enumerate(loader):
+#     do_stuff()

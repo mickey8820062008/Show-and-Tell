@@ -18,11 +18,11 @@ import torchvision.transforms as transforms
 
 
 # load flickr8k dataset
-prefix = '../Flickr_Data/'
-flickr8k_dataset = torchvision.datasets.Flickr30k(
-    root=prefix+'Images',
-    ann_file=prefix+'Flickr_TextData/Flickr8k.token'
-)
+
+imgRt = '../Flickr_Data/Images/'
+annRt = '../Flickr_Data/Flickr_TextData/Flickr8k.token'
+
+flickr8k_dataset = torchvision.datasets.Flickr30k(root=imgRt, ann_file=annRt)
 
 
 # In[3]:
@@ -63,51 +63,10 @@ for img_id in flickr8k_dataset.ids:
 
 # In[5]:
 
-from vision import *
-import numpy as np
-
-class FlickrDataset(VisionDataset):
-    def __len__(self): return len(self.prLis)
-    def __init__(self, transform, seq_len, root, prLis):
-        self.seq_len = seq_len
-        self.transform = transform
-        self.prLis = prLis
-        self.root = root
-        self.toTensor = torchvision.transforms.ToTensor()
-        super(FlickrDataset, self).__init__(root+'Images/')
-    def __getitem__(self, idx):
-        img_path = self.root+self.prLis[idx][0]
-        img = Image.open(img_path).convert('RGB')
-        img = self.transform(img)
-        cap = self.prLis[idx][1]
-        cap = [cap[i] if i<len(cap) else 0 for i in range(self.seq_len)]
-        return img, torch.LongTensor(cap)
-
-from torchvision import transforms
-
-
-def Loader(transform, seq_len, batch_size, shuffle):
-    train = FlickrDataset(transform,seq_len,prefix,flickr8k_data)
-    dataloader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=4)
-    return dataloader
-
-# # check caption length
-# import numpy as np
-# caption_length = []
-# for img_id, caption in flickr8k_data:
-#     caption_length.append(len(caption))
-    
-# print('Min: {}'.format(np.min(caption_length)))
-# print('Max: {}'.format(np.max(caption_length)))
-
-### USAGE!!!!!
-#for i, (xs,ys) in enumerate(dataloader):
-#    pass
-
-# In[6]:
-
-
 # save preprocessed data
-#torch.save(token_pool, 'preprocessed_data/flickr8k_id_to_word.pylist')
-#torch.save(flickr8k_data, 'preprocessed_data/flickr8k_data.pylist')
+torch.save(token_pool, './flickr8k_id_to_word.pylist')
+torch.save(flickr8k_data, './flickr8k_data.pylist')
 
+# Usage:
+# token_pool = torch.load(...)
+# flickr8k_data = torch.load(...)

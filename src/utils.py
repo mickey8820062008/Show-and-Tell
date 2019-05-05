@@ -11,11 +11,9 @@ import torch
 
 
 id_to_word = torch.load('./flickr8k_id_to_word.pylist')
-print(id_to_word)
 
-def resolve_caption(outputs, prob=True, reference='./preprocessed_data/flickr8k_id_to_word.pylist'):
+def resolve_caption(outputs, prob=True):
     # outputs: (batch_size, timesteps, features)
-    id_to_word = torch.load(reference)
     captions = []
     
     for output in outputs:
