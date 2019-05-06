@@ -1,0 +1,12 @@
+{
+	"flickr8k": {
+		"imgRt": "../Flickr_Data/Images/",
+		"annRt": "../ann/captions.txt",
+		"save": {
+			"tok2id": "../preJSON/tok2id.pylist",
+			"id2tok": "../preJSON/id2tok.pylist",
+			"prLis": "../preJSON/prLis.pylist"
+		}
+	}
+		
+}

@@ -2,7 +2,8 @@
 # coding: utf-8
 
 # In[ ]:
-
+import json
+config = json.load(open('../config.json'))['flickr8k']
 
 import torch
 import torchvision
@@ -35,10 +36,10 @@ class Cache:
 from vision import *
 import numpy as np
 
-imgRt = '../Flickr_Data/Images/'
+imgRt = config['imgRt']
 
-token_pool = torch.load('../preJSON/id2tok.pylist')
-flickr8k_data = torch.load('../preJSON/prLis.pylist')
+token_pool = torch.load(config['save']['id2tok'])
+flickr8k_data = torch.load(config['save']['prLis'])
 
 class FlickrDataset(VisionDataset):
     def __len__(self): return len(self.prLis)
@@ -60,7 +61,6 @@ from torchvision import transforms
 
 
 def Loader(transform, seq_len, batch_size, shuffle):
-    
     
     data = FlickrDataset(transform,seq_len,flickr8k_data)
     dataloader = torch.utils.data.DataLoader(
