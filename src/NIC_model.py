@@ -2,7 +2,8 @@
 # coding: utf-8
 
 # In[36]:
-
+import json
+config = json.load(open('../config.json'))['flickr8k']
 
 import torch
 import torch.nn as nn
@@ -14,7 +15,7 @@ import numpy as np
 
 
 # In[38]:
-tok2id = torch.load('../preJSON/tok2id.pylist')
+tok2id = torch.load(config['save']['tok2id'])
 tokNum = len(tok2id)
 
 def one_hot(batch_size, tok):

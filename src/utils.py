@@ -5,12 +5,14 @@
 
 
 import torch
+import json
+config = json.load(open('../config.json'))['flickr8k']
 
 
 # In[86]:
 
 
-id_to_word = torch.load('../preJSON/id2tok.pylist')
+id_to_word = torch.load(config['save']['id2tok'])
 
 def resolve_caption(outputs, prob=True):
     # outputs: (batch_size, timesteps, features)

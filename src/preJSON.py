@@ -1,9 +1,10 @@
 import torch
 import json
 
-capRt = '../ann/captions.txt'
+config = json.load(open('../config.json'))['flickr8k']
 
-f = open(capRt,'r')
+
+f = open(config['annRt'],'r')
 imgToCap = {k:v for line in f.readlines() for k,v in json.loads(line).items()}
 prLis = [(img, cap.lower()) for img,capLis in imgToCap.items() for cap in capLis]
 
@@ -31,7 +32,7 @@ def parse(img, cap):
 prLis = [parse(*x) for x in prLis]
 
 # save preprocessed data
-torch.save(tok2id, '../preJSON/tok2id.pylist')
-torch.save(token_pool, '../preJSON/id2tok.pylist')
-torch.save(prLis, '../preJSON/prLis.pylist')
+torch.save(tok2id, config['save']['tok2id'])
+torch.save(token_pool, config['save']['id2tok'])
+torch.save(prLis, config['save']['prLis'])
 
