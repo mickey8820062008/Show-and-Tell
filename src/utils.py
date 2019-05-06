@@ -10,7 +10,7 @@ import torch
 # In[86]:
 
 
-id_to_word = torch.load('./flickr8k_id_to_word.pylist')
+id_to_word = torch.load('../preJSON/id2tok.pylist')
 
 def resolve_caption(outputs, prob=True):
     # outputs: (batch_size, timesteps, features)

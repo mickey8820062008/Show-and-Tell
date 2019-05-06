@@ -14,7 +14,14 @@ import numpy as np
 
 
 # In[38]:
+tok2id = torch.load('../preJSON/tok2id.pylist')
+tokNum = len(tok2id)
 
+def one_hot(batch_size, tok):
+    m = torch.zeros(batch_size, tokNum)
+    for i in range(batch_size):
+        m[i,tok2id[tok] if tok in tok2id else tok2id['<unknown>']]=1.0
+    return m
 
 class NIC(nn.Module):
     def __init__(self, num_token, num_hidden=1000):
@@ -36,19 +43,18 @@ class NIC(nn.Module):
         
         embedded_target = self.embedding(target)
         
-        outputs = []
-        
-        for t in range(timesteps):
+        outputs = [one_hot(batch_size,'<start>').view(1,batch_size,-1).cuda()]
+        for t in range(timesteps-1):
             embedded_target_time_t = embedded_target[:, t, :].view(1, batch_size, -1)
             output, (self.ht, self.ct) = self.lstm(embedded_target_time_t)
             output = self.softmax(output)
-            outputs.append(output)  
+            outputs.append(output)
         outputs = torch.cat(outputs) # (time_steps,batch_size,features)
         outputs = outputs.permute(1,0, 2).contiguous() # (batch_size,time_steps,features)
         loss = self.loss(outputs.view(batch_size*timesteps, -1), target.view(batch_size*timesteps))
             
         return loss, outputs
-
+        
 
 # In[40]:
 
@@ -57,7 +63,7 @@ if False:
     sv = torch.load('../model/NIC.model')
     model, opt = sv['model'].cuda(), sv['opt']
 else:
-    model = NIC(3005).cuda()
+    model = NIC(tokNum).cuda()
     opt = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
 
 # In[41]:
@@ -74,7 +80,7 @@ loader = loader.Loader(
 
 import utils
 
-epoch_num = 5
+epoch_num = 15
 print('Train:')
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):
@@ -83,7 +89,7 @@ for epoch in range(epoch_num):
         opt.zero_grad()
         loss.backward()
         opt.step()
-        print('epoch: ',epoch,utils.resolve_caption(out[0:1],True))
+    print('epoch: ',epoch,utils.resolve_caption(out[:3],True))
 
 torch.save({'opt':opt, 'model':model},'../model/NIC.model')
 
@@ -99,20 +105,4 @@ for i, (xs,ys) in enumerate(loader):
                 utils.resolve_caption(ys,False)):
             print('gen: ',a)
             print('true: ',b)
-
-
-# img_id = '667626_18933d713e.jpg'
-
-# img = transform(Image.open('./dataset/Flickr8k/Images/'+img_id).convert('RGB')).reshape(1,3, 224, 224)
-# # img = (img*256).long()
-# # print(img.shape) # torch.Size([1, 3, 224, 224]
-
-# caption = torch.LongTensor(np.arange(50)).reshape((1, 50))
-# # print(caption.shape) # torch.Size([1, 50])
-
-
-# In[42]:
-
-
-# output = model(img.cuda(), caption.cuda())
 

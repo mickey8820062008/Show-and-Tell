@@ -36,11 +36,9 @@ from vision import *
 import numpy as np
 
 imgRt = '../Flickr_Data/Images/'
-annRt = '../Flickr_Data/Flickr_TextData/Flickr8k.token'
 
-token_pool = torch.load('./flickr8k_id_to_word.pylist')
-flickr8k_data = torch.load('./flickr8k_data.pylist')
-
+token_pool = torch.load('../preJSON/id2tok.pylist')
+flickr8k_data = torch.load('../preJSON/prLis.pylist')
 
 class FlickrDataset(VisionDataset):
     def __len__(self): return len(self.prLis)
@@ -62,9 +60,11 @@ from torchvision import transforms
 
 
 def Loader(transform, seq_len, batch_size, shuffle):
-    train = FlickrDataset(transform,seq_len,flickr8k_data)
+    
+    
+    data = FlickrDataset(transform,seq_len,flickr8k_data)
     dataloader = torch.utils.data.DataLoader(
-        train, batch_size=batch_size, shuffle=True, num_workers=4)
+        data, batch_size=batch_size, shuffle=True, num_workers=4)
     return dataloader
 
 # Usage
