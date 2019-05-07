@@ -1,12 +1,49 @@
 {
 	"flickr8k": {
 		"imgRt": "../Flickr_Data/Images/",
-		"annRt": "../ann/captions.txt",
+		"annRt": "../ann/train8k.json",
 		"save": {
-			"tok2id": "../preJSON/tok2id.pylist",
-			"id2tok": "../preJSON/id2tok.pylist",
-			"prLis": "../preJSON/prLis.pylist"
+			"tok2id": "../preJSON/tok2id.train",
+			"id2tok": "../preJSON/id2tok.train",
+			"prLis": "../preJSON/prLis.train"
+		},
+		"load": {
+			"tok2id": "../preJSON/tok2id.train",
+			"id2tok": "../preJSON/id2tok.train",
+			"prLis": "../preJSON/prLis.train"
+		}
+	},
+	"flickr8k.test":{
+		"imgRt": "../Flickr_Data/Images/",
+		"annRt": "../ann/test8k.json",
+		"save": {
+			"tok2id": "../preJSON/tok2id.test",
+			"id2tok": "../preJSON/id2tok.test",
+			"prLis": "../preJSON/prLis.test"
+		},
+		"load": {
+			"tok2id": "../preJSON/tok2id.train",
+			"id2tok": "../preJSON/id2tok.train",
+			"prLis": "../preJSON/prLis.test"
+		}
+	},
+	"bw8k": {
+		"imgRt": "/projects/training/bawc/flickr8kdata/train/",
+		"annRt": "/projects/training/bawc/flickr8kdata/train/captions.txt",
+		"save": {
+			"tok2id": "../preJSON/tok2id.train",
+			"id2tok": "../preJSON/id2tok.train",
+			"prLis": "../preJSON/prLis.train"
+		}
+	},
+	"bw8k.test":{
+		"imgRt": "/projects/training/bawc/flickr8kdata/test/",
+		"annRt": "/projects/training/bawc/flickr8kdata/text/captions.txt",
+		"save": {
+			"tok2id": "../preJSON/tok2id.test",
+			"id2tok": "../preJSON/id2tok.test",
+			"prLis": "../preJSON/prLis.test"
 		}
 	}
-		
+
 }

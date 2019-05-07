@@ -3,7 +3,8 @@
 
 # In[36]:
 import json
-config = json.load(open('../config.json'))['flickr8k']
+name = 'flickr8k'
+config = json.load(open('../config.json'))[name]
 
 import torch
 import torch.nn as nn
@@ -15,7 +16,11 @@ import numpy as np
 
 
 # In[38]:
-tok2id = torch.load(config['save']['tok2id'])
+import preJSON
+preJSON.preprocess(name,True)
+preJSON.preprocess(name,False)
+
+tok2id = torch.load(config['load']['tok2id'])
 tokNum = len(tok2id)
 
 def one_hot(batch_size, tok):
@@ -30,6 +35,7 @@ class NIC(nn.Module):
         self.num_token = num_token
         self.num_hidden = num_hidden
         self.cnn = torchvision.models.resnet34(pretrained=True)
+        self.fc = nn.Linear(1000,1000)
         self.embedding = nn.Embedding(num_token, self.num_hidden)
         self.lstm = nn.LSTM(self.num_hidden, self.num_token)
         self.softmax = nn.Softmax(2)
@@ -40,6 +46,7 @@ class NIC(nn.Module):
     def forward(self, image, target):
         batch_size, timesteps = target.shape
         with torch.no_grad(): image_features = self.cnn(image)
+        image_features = self.fc(image_features)
         _, (self.ht, self.ct) = self.lstm(image_features.view(1, batch_size, -1))
         
         embedded_target = self.embedding(target)
@@ -68,16 +75,23 @@ else:
     opt = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
 
 # In[41]:
-import loader
+import Loader
 import torchvision.transforms
 
 transform = transforms.Compose([
     transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
     transforms.ToTensor()
 ])
+test_transform = transforms.Compose([
+    transforms.CenterCrop(224),
+    transforms.ToTensor()
+])
+
 batch_size, seq_len = 128, 50
-loader = loader.Loader(
+loader = Loader.Loader(name=name,
     transform=transform, seq_len=seq_len, batch_size=batch_size,shuffle=True)
+tester = Loader.Loader(name=name+'.test',
+    transform=test_transform, seq_len=seq_len, batch_size=batch_size,shuffle=True)
 
 import utils
 
@@ -90,20 +104,20 @@ for epoch in range(epoch_num):
         opt.zero_grad()
         loss.backward()
         opt.step()
-    print('epoch: ',epoch,utils.resolve_caption(out[:3],True))
+    print('epoch: ',epoch,utils.resolve_caption(out[:3],True,True))
 
 torch.save({'opt':opt, 'model':model},'../model/NIC.model')
 
 # Test
 print('Test:')
 model.eval()
-for i, (xs,ys) in enumerate(loader):
+for i, (xs,ys) in enumerate(tester):
     xs, ys = xs.cuda(), ys.cuda()
     _, out = model(xs,ys)
-    if i%50 == 49:
+    if i%3 == 1:
         print('gen/true:',i)
-        for a,b in zip(utils.resolve_caption(out,True),
-                utils.resolve_caption(ys,False)):
+        for a,b in zip(utils.resolve_caption(out[:3],True,True),
+                utils.resolve_caption(ys[:3],False,True)):
             print('gen: ',a)
             print('true: ',b)
 
