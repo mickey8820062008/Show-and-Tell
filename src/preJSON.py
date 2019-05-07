@@ -7,18 +7,17 @@ def preprocess(dataset='flickr8k', train=True):
 
     f = open(config['annRt'],'r')
     imgToCap = {k:v for line in f.readlines() for k,v in json.loads(line).items()}
-    prLis = [(img, cap.lower()) for img,capLis in imgToCap.items() for cap in capLis]
+    prLis = [(img, cap.lower().split())
+            for img,capLis in imgToCap.items() for cap in capLis]
     if train:
         # count and validate tokens
         token_pool = ['<undefined>', '<unknown>', '<start>', '<end>']
         token_count = {}
         
         for i, (img, cap) in enumerate(prLis):
-            cap = cap.split()
             for tok in cap:
                 if tok in token_count: token_count[tok] += 1
                 else: token_count[tok] = 1
-            prLis[i] = (img,cap)
         
         token_pool.extend([key for key, value in token_count.items() if value >= 5])
         tok2id = {token: id for id, token in enumerate(token_pool)}

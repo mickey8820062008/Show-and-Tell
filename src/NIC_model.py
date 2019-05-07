@@ -95,7 +95,7 @@ tester = Loader.Loader(name=name+'.test',
 
 import utils
 
-epoch_num = 15
+epoch_num = 0
 print('Train:')
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):

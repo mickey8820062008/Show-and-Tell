@@ -17,10 +17,9 @@ id_to_word = torch.load(config['load']['id2tok'])
 def resolve_caption(outputs, prob=True, clip=False):
     # outputs: (batch_size, timesteps, features)
     captions = []
-
     for output in outputs:
         if prob: caption = ' '.join([id_to_word[torch.argmax(id)] for id in output])
-        else: caption = ' '.join([id_to_word[id] for id in output]) 
+        else: caption = ' '.join([id_to_word[id] for id in output])
         if clip:
             try: caption = caption[:caption.index('<end>')+5]
             except: pass
