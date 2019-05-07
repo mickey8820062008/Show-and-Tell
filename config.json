@@ -38,7 +38,7 @@
 	},
 	"bw8k.test":{
 		"imgRt": "/projects/training/bawc/flickr8kdata/test/",
-		"annRt": "/projects/training/bawc/flickr8kdata/text/captions.txt",
+		"annRt": "/projects/training/bawc/flickr8kdata/test/captions.txt",
 		"save": {
 			"tok2id": "../preJSON/tok2id.train",
 			"id2tok": "../preJSON/id2tok.train",
