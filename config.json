@@ -58,6 +58,36 @@
 			"prLis": "../preJSON/prLis.test",
 			"img2cap": "../preJSON/img2cap.test"
 		}
+	},
+	"bw30k": {
+		"imgRt": "/projects/training/bawc/Flickr30k_data_copy/train/",
+		"annRt": "/projects/training/bawc/Flickr30k_data_copy/train/captions.txt",
+		"save": {
+			"tok2id": "../preJSON/tok2id30k.train",
+			"id2tok": "../preJSON/id2tok30k.train",
+			"prLis": "../preJSON/prLis30k.train"
+		},
+		"load": {
+			"tok2id": "../preJSON/tok2id30k.train",
+			"id2tok": "../preJSON/id2tok30k.train",
+			"prLis": "../preJSON/prLis30k.train"
+		}
+	},
+	"bw30k.test":{
+		"imgRt": "/projects/training/bawc/Flickr30k_data_copy/test/",
+		"annRt": "/projects/training/bawc/flickr30k_data_copy/test/captions.txt",
+		"save": {
+			"tok2id": "../preJSON/tok2id30k.test",
+			"id2tok": "../preJSON/id2tok30k.test",
+			"prLis": "../preJSON/prLis30k.test",
+			"img2cap": "../preJSON/img2cap30k.test"
+		},
+		"load": {
+			"tok2id": "../preJSON/tok2id30k.train",
+			"id2tok": "../preJSON/id2tok30k.train",
+			"prLis": "../preJSON/prLis30k.test",
+			"img2cap": "../preJSON/img2cap30k.test"
+		}
 	}
 
 }
