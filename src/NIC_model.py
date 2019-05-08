@@ -13,7 +13,7 @@ import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
-
+import random
 
 # In[38]:
 import preJSON
@@ -43,18 +43,25 @@ class NIC(nn.Module):
         self.ct = None
         self.loss = nn.CrossEntropyLoss()
         
-    def forward(self, image, target):
+    def forward(self, image, target, schedule):
+        # schedule = prob of choosing previous input
+        # typically while testing, schedule=1
+        # while training, schedule = closer to 0 (e.g. 0.25)
         batch_size, timesteps = target.shape
         with torch.no_grad(): image_features = self.cnn(image)
         image_features = self.fc(image_features)
         _, (self.ht, self.ct) = self.lstm(image_features.view(1, batch_size, -1))
         
         embedded_target = self.embedding(target)
-        
         outputs = [one_hot(batch_size,'<start>').view(1,batch_size,-1).cuda()]
         for t in range(timesteps-1):
-            embedded_target_time_t = embedded_target[:, t, :].view(1, batch_size, -1)
-            output, (self.ht, self.ct) = self.lstm(embedded_target_time_t)
+            if random.uniform(0,1)<schedule:
+                feed = torch.argmax(outputs[-1],2).view(batch_size,1)
+                feed = self.embedding(feed)
+            else: feed = embedded_target[:, t, :]
+            feed = feed.view(1, batch_size, -1)
+            #embedded_target_time_t = embedded_target[:, t, :].view(1, batch_size, -1)
+            output, (self.ht, self.ct) = self.lstm(feed)
             output = self.softmax(output)
             outputs.append(output)
         outputs = torch.cat(outputs) # (time_steps,batch_size,features)
@@ -62,17 +69,17 @@ class NIC(nn.Module):
         loss = self.loss(outputs.view(batch_size*timesteps, -1), target.view(batch_size*timesteps))
             
         return loss, outputs
-        
+     
 
 # In[40]:
-
+modelRt = '../model/NIC.model'
 learning_rate = 0.001
 if False:
-    sv = torch.load('../model/NIC.model')
+    sv = torch.load(modelRt)
     model, opt = sv['model'].cuda(), sv['opt']
 else:
     model = NIC(tokNum).cuda()
-    opt = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+    opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 # In[41]:
 import Loader
@@ -93,31 +100,33 @@ loader = Loader.Loader(name=name,
 tester = Loader.Loader(name=name+'.test',
     transform=test_transform, seq_len=seq_len, batch_size=batch_size,shuffle=True)
 
+
 import utils
 
-epoch_num = 0
+epoch_num = 1
 print('Train:')
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):
         xs, ys = xs.cuda(), ys.cuda()
-        loss, out = model(xs,ys)
+        loss, out = model(xs,ys,schedule=0.25)
         opt.zero_grad()
         loss.backward()
         opt.step()
-    print('epoch: ',epoch,utils.resolve_caption(out[:3],True,True))
-
-torch.save({'opt':opt, 'model':model},'../model/NIC.model')
+    idxLis = np.random.choice(batch_size,3)
+    print('epoch: ',epoch,utils.resolve_caption(out[:3],name,True,True,True))
+    if epoch%3==2: torch.save({'opt':opt, 'model':model},modelRt)
 
 # Test
 print('Test:')
 model.eval()
 for i, (xs,ys) in enumerate(tester):
     xs, ys = xs.cuda(), ys.cuda()
-    _, out = model(xs,ys)
+    _, out = model(xs,ys,schedule=1.0)
     if i%3 == 1:
-        print('gen/true:',i)
-        for a,b in zip(utils.resolve_caption(out[:3],True,True),
-                utils.resolve_caption(ys[:3],False,True)):
-            print('gen: ',a)
-            print('true: ',b)
+        print('gen/true',i,':')
+        idxLis = np.random.choice(batch_size,3)
+        for gen,truth in zip(utils.resolve_caption(out[idxLis],name,False,True,True),
+                utils.resolve_caption(ys[idxLis],name,False,False,True)):
+            print("gen: ",gen)
+            print('truth: ',truth)
 

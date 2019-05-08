@@ -19,12 +19,14 @@
 		"save": {
 			"tok2id": "../preJSON/tok2id.test",
 			"id2tok": "../preJSON/id2tok.test",
-			"prLis": "../preJSON/prLis.test"
+			"prLis": "../preJSON/prLis.test",
+			"img2cap": "../preJSON/img2cap.test"
 		},
 		"load": {
 			"tok2id": "../preJSON/tok2id.train",
 			"id2tok": "../preJSON/id2tok.train",
-			"prLis": "../preJSON/prLis.test"
+			"prLis": "../preJSON/prLis.test",
+			"img2cap": "../preJSON/img2cap.test"
 		}
 	},
 	"bw8k": {
@@ -34,15 +36,27 @@
 			"tok2id": "../preJSON/tok2id.train",
 			"id2tok": "../preJSON/id2tok.train",
 			"prLis": "../preJSON/prLis.train"
+		},
+		"load": {
+			"tok2id": "../preJSON/tok2id.train",
+			"id2tok": "../preJSON/id2tok.train",
+			"prLis": "../preJSON/prLis.train"
 		}
 	},
 	"bw8k.test":{
 		"imgRt": "/projects/training/bawc/flickr8kdata/test/",
 		"annRt": "/projects/training/bawc/flickr8kdata/test/captions.txt",
 		"save": {
+			"tok2id": "../preJSON/tok2id.test",
+			"id2tok": "../preJSON/id2tok.test",
+			"prLis": "../preJSON/prLis.test",
+			"img2cap": "../preJSON/img2cap.test"
+		},
+		"load": {
 			"tok2id": "../preJSON/tok2id.train",
 			"id2tok": "../preJSON/id2tok.train",
-			"prLis": "../preJSON/prLis.test"
+			"prLis": "../preJSON/prLis.test",
+			"img2cap": "../preJSON/img2cap.test"
 		}
 	}
 

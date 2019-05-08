@@ -1,6 +1,6 @@
 import torch
 import json
-    
+ 
 def preprocess(dataset='flickr8k', train=True):
     if not train: dataset+='.test'
     config = json.load(open('../config.json'))[dataset]
@@ -33,6 +33,13 @@ def preprocess(dataset='flickr8k', train=True):
         cap = [tok2id['<start>']]+[getIdx(tok) for tok in cap]+[tok2id['<end>']]
         return img, cap
     prLis = [parse(*x) for x in prLis]
+    
+    img2cap = {}
+    if not train:
+        for img, cap in prLis:
+            if img not in img2cap: img2cap[img] = [cap]
+            else: img2cap[img].append(cap)
+        torch.save(img2cap, config['save']['img2cap'])
 
     # save preprocessed data
     torch.save(tok2id, config['save']['tok2id'])
