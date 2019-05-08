@@ -34,7 +34,7 @@ class NIC(nn.Module):
         super(NIC, self).__init__()
         self.num_token = num_token
         self.num_hidden = num_hidden
-        self.cnn = torchvision.models.resnet34(pretrained=True)
+        self.cnn = torchvision.models.resnet101(pretrained=True)
         self.fc = nn.Linear(1000,1000)
         self.embedding = nn.Embedding(num_token, self.num_hidden)
         self.lstm = nn.LSTM(self.num_hidden, self.num_token)

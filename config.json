@@ -75,7 +75,7 @@
 	},
 	"bw30k.test":{
 		"imgRt": "/projects/training/bawc/Flickr30k_data_copy/test/",
-		"annRt": "/projects/training/bawc/flickr30k_data_copy/test/captions.txt",
+		"annRt": "/projects/training/bawc/Flickr30k_data_copy/test/captions.txt",
 		"save": {
 			"tok2id": "../preJSON/tok2id30k.test",
 			"id2tok": "../preJSON/id2tok30k.test",
