@@ -4,8 +4,7 @@ from nltk.translate.bleu_score import sentence_bleu
 
 class BLEU:
     def __init__(self, name):
-        self.name = name
-        self.config = json.load('../config.json')[name+'.test']
+        config = json.load(open('../config.json','r'))[name+'.test']
         self.img2caps = torch.load(config['load']['img2cap'])
 
     def __call__(self, imgid, predict):

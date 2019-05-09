@@ -24,7 +24,7 @@ class TestLoader(VisionDataset):
         image = Image.open(self.root + self.data[idx]).convert('RGB')
         image = self.transform(image)
         
-        return image
+        return self.data[idx], image
         
 def get_test_loader(name, batch_size):
     config = json.load(open('../config.json'))[name+'.test']

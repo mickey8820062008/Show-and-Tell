@@ -48,14 +48,14 @@ class NIC(nn.Module):
         # schedule = prob of choosing previous input
         # typically while testing, schedule=1
         # while training, schedule = closer to 0 (e.g. 0.25)
-        batch_size, timesteps = target.shape
+        batch_size = len(image)
         with torch.no_grad(): image_features = self.cnn(image)
         image_features = self.fc(image_features)
         _, (self.ht, self.ct) = self.lstm(image_features.view(1, batch_size, -1))
         
-        embedded_target = self.embedding(target)
+        if target is not None: embedded_target = self.embedding(target)
         outputs = [one_hot(batch_size,'<start>').view(1,batch_size,-1).cuda()]
-        for t in range(timesteps-1):
+        for t in range(seq_len-1):
             if random.uniform(0,1)<schedule:
                 feed = torch.argmax(outputs[-1],2).view(batch_size,1)
                 feed = self.embedding(feed)
@@ -68,14 +68,15 @@ class NIC(nn.Module):
             outputs.append(output)
         outputs = torch.cat(outputs) # (time_steps,batch_size,features)
         outputs = outputs.permute(1,0, 2).contiguous() # (batch_size,time_steps,features)
-        loss = self.loss(outputs.view(batch_size*timesteps, -1), target.view(batch_size*timesteps))
-            
+        if target is not None: loss = self.loss(outputs.view(batch_size*seq_len, -1),
+                target.view(batch_size*seq_len))
+        else: loss = 0
         return loss, outputs
      
 
 # In[40]:
 modelRt = '../model/NIC.model'
-learning_rate = 0.001
+learning_rate = 0.01
 if False:
     sv = torch.load(modelRt)
     model, opt = sv['model'].cuda(), sv['opt']
@@ -105,7 +106,7 @@ tester = Loader.Loader(name=name+'.test',
 
 import utils
 
-epoch_num = 1
+epoch_num = 0
 print('Train:')
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):
@@ -131,4 +132,23 @@ for i, (xs,ys) in enumerate(tester):
                 utils.resolve_caption(ys[idxLis],name,False,False,True)):
             print("gen: ",gen)
             print('truth: ',truth)
+
+
+
+import BLEU
+import dataset
+# Eval
+print('BLEU:')
+total, score = 0, 0
+bleu = BLEU.BLEU(name)
+evalTester = dataset.get_test_loader(name, batch_size)
+for i, (idLis,xs) in enumerate(evalTester):
+    xs = xs.cuda()
+    _, ys = model(xs,None,schedule=1)
+    for i, y in zip(idLis,ys.cpu()):
+        score += bleu(i, y)
+        total += 1
+score /= total
+print(score)
+
 
