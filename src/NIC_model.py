@@ -34,10 +34,11 @@ class NIC(nn.Module):
         super(NIC, self).__init__()
         self.num_token = num_token
         self.num_hidden = num_hidden
-        self.cnn = torchvision.models.resnet101(pretrained=True)
+        self.cnn = torchvision.models.resnet34(pretrained=True)
         self.fc = nn.Linear(1000,1000)
         self.embedding = nn.Embedding(num_token, self.num_hidden)
-        self.lstm = nn.LSTM(self.num_hidden, self.num_token)
+        self.lstm = nn.LSTM(self.num_hidden, 1000)
+        self.lstm_fc = nn.Linear(1000,num_token)
         self.softmax = nn.Softmax(2)
         self.ht = None
         self.ct = None
@@ -62,6 +63,7 @@ class NIC(nn.Module):
             feed = feed.view(1, batch_size, -1)
             #embedded_target_time_t = embedded_target[:, t, :].view(1, batch_size, -1)
             output, (self.ht, self.ct) = self.lstm(feed)
+            output = self.lstm_fc(output.view(batch_size,-1)).view(1,batch_size,-1)
             output = self.softmax(output)
             outputs.append(output)
         outputs = torch.cat(outputs) # (time_steps,batch_size,features)
