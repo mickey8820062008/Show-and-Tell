@@ -10,4 +10,5 @@ class BLEU:
     def __call__(self, imgid, predict):
         references = self.img2caps[imgid]
         candidate = predict
+        print(references,candidate)
         return sentence_bleu(references, candidate)
