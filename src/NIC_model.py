@@ -29,6 +29,22 @@ def one_hot(batch_size, tok):
         m[i,tok2id[tok] if tok in tok2id else tok2id['<unknown>']]=1.0
     return m
 
+class LockedDropout(nn.Module):
+    def __init__(self):
+        super(LockedDropout,self).__init__()
+        self.m = None
+
+    def reset_state(self):
+        self.m = None
+
+    def forward(self, x, dropout=0.5, train=True):
+        if train==False:
+            return x
+        if(self.m is None or x.shape[0] != self.m.shape[0]):
+            self.m = x.data.new(x.size()).bernoulli_(1 - dropout)
+        mask = torch.autograd.Variable(self.m, requires_grad=False) / (1 - dropout)
+        return mask * x
+
 class NIC(nn.Module):
     def __init__(self, num_token, num_hidden=1000):
         super(NIC, self).__init__()
@@ -40,7 +56,8 @@ class NIC(nn.Module):
         self.lstm1 = nn.LSTM(self.num_hidden, 1000)
         self.lstm1_fc = nn.Linear(1000,num_token)
         self.lstm1_bn = nn.BatchNorm1d(num_token)
-        self.lstm1_drop = nn.Dropout(p=0.5) # TODO: Locked Dropout
+        #self.lstm1_drop = nn.Dropout(p=0.5)
+        self.lstm1_drop = LockedDropout() #nn.Dropout(p=0.5)
 
         #self.lstm2 = nn.LSTM(self.num_hidden, 1000)
         #self.lstm2_fc = nn.Linear(1000,num_token)
@@ -70,7 +87,7 @@ class NIC(nn.Module):
             else: feed = embedded_target[:, t, :]
             feed = feed.view(1, batch_size, -1)
             #embedded_target_time_t = embedded_target[:, t, :].view(1, batch_size, -1)
-            output, (self.ht, self.ct) = self.lstm1(feed)
+            output, (self.ht, self.ct) = self.lstm1(feed, (self.ht, self.ct))
             output = self.lstm1_fc(output.view(batch_size,-1))
             output = self.lstm1_bn(output)
             output = self.lstm1_drop(output).view(1,batch_size,-1)
@@ -86,7 +103,7 @@ class NIC(nn.Module):
 
 # In[40]:
 modelRt = '../model/NIC.model'
-learning_rate = 0.01
+learning_rate = 0.001
 if False:
     sv = torch.load(modelRt)
     model, opt = sv['model'].cuda(), sv['opt']
@@ -108,7 +125,7 @@ test_transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-batch_size, seq_len = 128, 50
+batch_size, seq_len = 256, 50
 loader = Loader.Loader(name=name,
     transform=transform, seq_len=seq_len, batch_size=batch_size,shuffle=True)
 tester = Loader.Loader(name=name+'.test',
@@ -117,7 +134,7 @@ tester = Loader.Loader(name=name+'.test',
 
 import utils
 
-epoch_num = 0
+epoch_num = 5
 print('Train:')
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):
@@ -127,9 +144,9 @@ for epoch in range(epoch_num):
         loss.backward()
         opt.step()
     idxLis = np.random.choice(batch_size,3)
-    print('epoch: ',epoch,utils.resolve_caption(out[:3],name,True,True,True))
+    print('epoch: ', epoch,utils.resolve_caption(out[:3],name,True,True,True))
+    print('loss: ', loss)
     if epoch%3==2: torch.save({'opt':opt, 'model':model},modelRt)
-
 # Test
 print('Test:')
 model.eval()
@@ -143,7 +160,6 @@ for i, (xs,ys) in enumerate(tester):
                 utils.resolve_caption(ys[idxLis],name,False,False,True)):
             print("gen: ",gen)
             print('truth: ',truth)
-
 
 import BLEU
 import dataset

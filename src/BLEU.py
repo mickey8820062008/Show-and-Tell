@@ -1,6 +1,7 @@
 import torch
 import json
 from nltk.translate.bleu_score import sentence_bleu
+import numpy as np
 
 class BLEU:
     def __init__(self, name):
@@ -9,6 +10,5 @@ class BLEU:
 
     def __call__(self, imgid, predict):
         references = self.img2caps[imgid]
-        candidate = predict
-        print(references,candidate)
+        candidate = np.array(predict)
         return sentence_bleu(references, candidate)
