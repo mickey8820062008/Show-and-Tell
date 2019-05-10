@@ -20,6 +20,7 @@ import preJSON
 preJSON.preprocess(name,True)
 preJSON.preprocess(name,False)
 
+id2tok = torch.load(config['load']['id2tok'])
 tok2id = torch.load(config['load']['tok2id'])
 tokNum = len(tok2id)
 
@@ -99,7 +100,36 @@ class NIC(nn.Module):
                 target.view(batch_size*seq_len))
         else: loss = 0
         return loss, outputs
-     
+    def beam(self, image, k, idx, st):
+        # pass in a single image
+        sht, sct = self.ht[:,idx,:].view(1,1,-1), self.ct[:,idx,:].view(1,1,-1)
+        front = [[st,1,sht,sct,None]]
+        for t in range(seq_len-1):
+            que = []
+            for i,(y, prob, ht, ct, prev) in enumerate(front):
+                h = self.embedding(y.view(1,1))
+                h, (ht, ct) = self.lstm1(h.view(1,1,-1),(ht,ct))
+                h = self.lstm1_fc(h.view(1,-1))
+                h = self.lstm1_bn(h)
+                h = self.lstm1_drop(h).view(1,1,-1)
+                h = self.softmax(h).view(-1)
+                que.append([[j,h[j]*prob,ht,ct,front[i]] for j in h.argsort()[-k:]])
+            que = [x for lis in que for x in lis]
+            front = sorted(que,key=lambda x:x[1])[-k:]
+        pvt = front[-1]
+        out = []
+        while pvt != None:
+            out.append(pvt[0])
+            pvt = pvt[4]
+        return torch.tensor(out[::-1])
+    def batch_beam(self, image, k):
+        st = torch.tensor(tok2id['<start>']).cuda()
+        batch_size = len(image)
+        with torch.no_grad(): h = self.cnn(image)
+        h = self.fc(h)
+        _, (self.ht, self.ct) = self.lstm1(h.view(1,batch_size,-1))
+        return torch.stack([self.beam(img,k,idx,st) for idx, img in enumerate(image)])
+        
 
 # In[40]:
 modelRt = '../model/NIC.model'
@@ -114,16 +144,35 @@ else:
 
 # In[41]:
 import Loader
-import torchvision.transforms
+from torchvision import transforms
+import random
 
 transform = transforms.Compose([
-    transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
-    transforms.ToTensor()
+    transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0,1.0)),
+    transforms.ColorJitter(
+            brightness=0.1*random.uniform(0, 1),
+            contrast=0.1*random.uniform(0, 1),
+            saturation=0.1*random.uniform(0, 1),
+            hue=0.1*random.uniform(0, 1)),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ])
+
 test_transform = transforms.Compose([
     transforms.CenterCrop(224),
-    transforms.ToTensor()
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ])
+
+#transform = transforms.Compose([
+#    transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(1.0, 1.0)),
+#    transforms.ToTensor()
+#])
+#test_transform = transforms.Compose([
+#    transforms.CenterCrop(224),
+#    transforms.ToTensor()
+#])
 
 batch_size, seq_len = 256, 50
 loader = Loader.Loader(name=name,
@@ -134,7 +183,7 @@ tester = Loader.Loader(name=name+'.test',
 
 import utils
 
-epoch_num = 5
+epoch_num = 20
 print('Train:')
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):
@@ -147,16 +196,19 @@ for epoch in range(epoch_num):
     print('epoch: ', epoch,utils.resolve_caption(out[:3],name,True,True,True))
     print('loss: ', loss)
     if epoch%3==2: torch.save({'opt':opt, 'model':model},modelRt)
+
 # Test
+beam_num = 3
 print('Test:')
 model.eval()
 for i, (xs,ys) in enumerate(tester):
     xs, ys = xs.cuda(), ys.cuda()
-    _, out = model(xs,ys,schedule=1.0)
+    #_, out = model(xs,ys,schedule=1.0)
+    out = model.batch_beam(xs,3)
     if i%3 == 1:
         print('gen/true',i,':')
-        idxLis = np.random.choice(batch_size,3)
-        for gen,truth in zip(utils.resolve_caption(out[idxLis],name,False,True,True),
+        idxLis = np.random.choice(batch_size,beam_num)
+        for gen,truth in zip(utils.resolve_caption(out[idxLis],name,False,False,True),
                 utils.resolve_caption(ys[idxLis],name,False,False,True)):
             print("gen: ",gen)
             print('truth: ',truth)
@@ -170,9 +222,11 @@ bleu = BLEU.BLEU(name)
 evalTester = dataset.get_test_loader(name, batch_size)
 for i, (idLis,xs) in enumerate(evalTester):
     xs = xs.cuda()
-    _, ys = model(xs,None,schedule=1)
+    #_, ys = model(xs,None,schedule=1)
+    ys = model.batch_beam(xs,beam_num)
     for i, y in zip(idLis,ys.cpu()):
-        score += bleu(i, torch.argmax(y,1))
+        #score += bleu(i, torch.argmax(y,1))
+        score += bleu(i, y)
         total += 1
 score /= total
 print(score)
