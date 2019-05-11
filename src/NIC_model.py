@@ -51,11 +51,11 @@ class NIC(nn.Module):
         super(NIC, self).__init__()
         self.num_token = num_token
         self.num_hidden = num_hidden
-        self.cnn = torchvision.models.resnet34(pretrained=True)
+        self.cnn = torchvision.models.resnet101(pretrained=True)
         self.fc = nn.Linear(1000,1000)
         self.embedding = nn.Embedding(num_token, self.num_hidden)
-        self.lstm1 = nn.LSTM(self.num_hidden, 1000)
-        self.lstm1_fc = nn.Linear(1000,num_token)
+        self.lstm1 = nn.LSTM(self.num_hidden, 2000)
+        self.lstm1_fc = nn.Linear(2000,num_token)
         self.lstm1_bn = nn.BatchNorm1d(num_token)
         #self.lstm1_drop = nn.Dropout(p=0.5)
         self.lstm1_drop = LockedDropout() #nn.Dropout(p=0.5)
@@ -74,6 +74,7 @@ class NIC(nn.Module):
         # schedule = prob of choosing previous input
         # typically while testing, schedule=1
         # while training, schedule = closer to 0 (e.g. 0.25)
+        self.lstm1_drop.reset_state()
         batch_size = len(image)
         with torch.no_grad(): image_features = self.cnn(image)
         image_features = self.fc(image_features)
@@ -92,7 +93,7 @@ class NIC(nn.Module):
             output = self.lstm1_fc(output.view(batch_size,-1))
             output = self.lstm1_bn(output)
             output = self.lstm1_drop(output).view(1,batch_size,-1)
-            output = self.softmax(output)
+            #output = self.softmax(output)
             outputs.append(output)
         outputs = torch.cat(outputs) # (time_steps,batch_size,features)
         outputs = outputs.permute(1,0, 2).contiguous() # (batch_size,time_steps,features)
@@ -133,14 +134,14 @@ class NIC(nn.Module):
 
 # In[40]:
 modelRt = '../model/NIC.model'
-learning_rate = 0.001
+learning_rate = 0.1
 if False:
     sv = torch.load(modelRt)
     model, opt = sv['model'].cuda(), sv['opt']
 else:
     model = NIC(tokNum).cuda()
-    #opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    opt = torch.optim.RMSprop(model.parameters(), lr=learning_rate,momentum=0.9)
+    opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    #opt = torch.optim.RMSprop(model.parameters(), lr=learning_rate,momentum=0.9)
 
 # In[41]:
 import Loader
@@ -183,7 +184,7 @@ tester = Loader.Loader(name=name+'.test',
 
 import utils
 
-epoch_num = 20
+epoch_num = 0
 print('Train:')
 for epoch in range(epoch_num):
     for i, (xs,ys) in enumerate(loader):
@@ -198,17 +199,18 @@ for epoch in range(epoch_num):
     if epoch%3==2: torch.save({'opt':opt, 'model':model},modelRt)
 
 # Test
-beam_num = 3
+beam_num = 50
 print('Test:')
 model.eval()
+
 for i, (xs,ys) in enumerate(tester):
     xs, ys = xs.cuda(), ys.cuda()
-    #_, out = model(xs,ys,schedule=1.0)
-    out = model.batch_beam(xs,3)
+    _, out = model(xs,ys,schedule=1.0)
+    #out = model.batch_beam(xs,beam_num)
     if i%3 == 1:
         print('gen/true',i,':')
-        idxLis = np.random.choice(batch_size,beam_num)
-        for gen,truth in zip(utils.resolve_caption(out[idxLis],name,False,False,True),
+        idxLis = np.random.choice(len(out),3)
+        for gen,truth in zip(utils.resolve_caption(out[idxLis],name,False,True,True),
                 utils.resolve_caption(ys[idxLis],name,False,False,True)):
             print("gen: ",gen)
             print('truth: ',truth)
@@ -222,11 +224,11 @@ bleu = BLEU.BLEU(name)
 evalTester = dataset.get_test_loader(name, batch_size)
 for i, (idLis,xs) in enumerate(evalTester):
     xs = xs.cuda()
-    #_, ys = model(xs,None,schedule=1)
-    ys = model.batch_beam(xs,beam_num)
+    _, ys = model(xs,None,schedule=1)
+    #ys = model.batch_beam(xs,beam_num)
     for i, y in zip(idLis,ys.cpu()):
-        #score += bleu(i, torch.argmax(y,1))
-        score += bleu(i, y)
+        score += bleu(i, torch.argmax(y,1))
+        #score += bleu(i, y)
         total += 1
 score /= total
 print(score)
